@@ -1,0 +1,10 @@
+AI Playground Notes
+
+FKG experiment scores:
+experiment_a = 0.82
+experiment_b = 0.76
+experiment_c = 0.91
+
+MCP is a protocol for connecting AI applications with external tools and data.
+
+The current FKG experiment studies federated experience sharing for ETL path recommendation.

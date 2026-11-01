@@ -1,0 +1,4 @@
+pydantic-ai==2.51.0
+mcp==2.2.0
+httpx==0.28.1
+openai==3.19.2

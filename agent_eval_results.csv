@@ -1,0 +1,11 @@
+model,case,success,answer_correct,tool_correct,tool_calls_actual,tool_calls_expected,extra_tool_calls,tools,requests,input_tokens,output_tokens,cache_read_tokens,error
+GPT-5.6-Luna,T1_no_tool,True,True,True,0,0,0,,1,182,176,0,
+GPT-5.6-Luna,T2_single_tool,True,True,True,1,1,0,get_fkg_experiments,2,476,63,0,
+GPT-5.6-Luna,T3_two_step,False,False,False,0,2,0,,,,,,ModelAPIError('Connection error.')
+GPT-5.6-Luna,T4_specialized_tool,True,True,True,1,1,0,get_best_fkg_experiment,2,420,61,0,
+GPT-5.6-Luna,T5_composed_task,True,True,True,3,2,1,get_fkg_experiments -> get_best_fkg_experiment -> calculate,3,978,195,0,
+Qwen3-4B,T1_no_tool,True,True,True,0,0,0,,1,332,490,0,
+Qwen3-4B,T2_single_tool,True,True,True,1,1,0,get_fkg_experiments,2,1113,548,649,
+Qwen3-4B,T3_two_step,True,True,True,2,2,0,get_fkg_experiments -> calculate,3,3465,1701,1981,
+Qwen3-4B,T4_specialized_tool,True,True,True,1,1,0,get_best_fkg_experiment,2,935,473,644,
+Qwen3-4B,T5_composed_task,False,False,False,0,2,0,,,,,,ModelAPIError('Request timed out.')

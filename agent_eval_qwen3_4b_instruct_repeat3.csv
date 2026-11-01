@@ -1,0 +1,16 @@
+model,case,repeat,status,success,answer_correct,tool_correct,tool_calls_actual,tool_calls_expected,extra_tool_calls,tools,requests,input_tokens,output_tokens,cache_read_tokens,latency_seconds,error
+Qwen3-4B-Instruct,T1_no_tool,1,PASS,True,True,True,0,0,0,,1,332,539,313,13.7,
+Qwen3-4B-Instruct,T1_no_tool,2,PASS,True,True,True,0,0,0,,1,332,419,331,10.38,
+Qwen3-4B-Instruct,T1_no_tool,3,PASS,True,True,True,0,0,0,,1,332,470,331,11.59,
+Qwen3-4B-Instruct,T2_single_tool,1,PASS,True,True,True,1,1,0,get_fkg_experiments,2,1308,761,649,20.78,
+Qwen3-4B-Instruct,T2_single_tool,2,PASS,True,True,True,1,1,0,get_fkg_experiments,2,1189,701,670,19.18,
+Qwen3-4B-Instruct,T2_single_tool,3,PASS,True,True,True,1,1,0,get_fkg_experiments,2,1334,724,670,20.28,
+Qwen3-4B-Instruct,T3_two_step,1,PASS,True,True,True,2,2,0,get_fkg_experiments -> calculate,3,7678,4085,3824,123.52,
+Qwen3-4B-Instruct,T3_two_step,2,PASS,True,True,True,2,2,0,get_fkg_experiments -> calculate,3,4683,2230,2636,63.79,
+Qwen3-4B-Instruct,T3_two_step,3,PASS,True,True,True,2,2,0,get_fkg_experiments -> calculate,3,4657,2679,2212,77.33,
+Qwen3-4B-Instruct,T4_specialized_tool,1,PASS,True,True,True,1,1,0,get_best_fkg_experiment,2,940,405,644,11.06,
+Qwen3-4B-Instruct,T4_specialized_tool,2,PASS,True,True,True,1,1,0,get_best_fkg_experiment,2,844,363,658,9.64,
+Qwen3-4B-Instruct,T4_specialized_tool,3,PASS,True,True,True,1,1,0,get_best_fkg_experiment,2,848,605,658,15.79,
+Qwen3-4B-Instruct,T5_composed_task,1,TIMEOUT,False,False,False,0,2,0,,,,,,361.3,ModelAPIError('Request timed out.')
+Qwen3-4B-Instruct,T5_composed_task,2,TIMEOUT,False,False,False,0,2,0,,,,,,361.35,ModelAPIError('Request timed out.')
+Qwen3-4B-Instruct,T5_composed_task,3,TIMEOUT,False,False,False,0,2,0,,,,,,361.5,ModelAPIError('Request timed out.')
