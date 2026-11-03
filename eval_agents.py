@@ -157,7 +157,7 @@ def make_local_agent() -> Agent:
     )
 
     model = OllamaModel(
-        "qwen3:4b",
+        "qwen3:4b-instruct",
         provider=OllamaProvider(
             base_url="http://127.0.0.1:11434/v1",
             http_client=cast(Any, http_client),
@@ -202,7 +202,7 @@ def _trace_preview(value: Any, limit: int = 500) -> str:
     return text[:limit]
 
 
-def print_t3_trace(result) -> list[dict[str, Any]]:
+def print_run_trace(result) -> list[dict[str, Any]]:
     """Print a minimal per-request trace for T3_two_step only."""
     trace: list[dict[str, Any]] = []
     request_sent_at = None
@@ -392,9 +392,6 @@ def run_case(
 
         tool_names = extract_tool_calls(result)
 
-        if case.name == "T3_two_step":
-            print_t3_trace(result)
-
         answer_correct = case.answer_check(output)
 
         tool_correct, extra_tools = evaluate_tools(
@@ -418,7 +415,17 @@ def run_case(
         print("Tools:", tool_names)
         print("Expected:", case.expected_tools)
         print("Status:", status)
+        print("Extra tool calls:", extra_tools)
+        print("Requests:", getattr(usage, "requests", None))
         print(f"Latency: {latency:.2f}s")
+        print(
+            "Input tokens:",
+            getattr(usage, "input_tokens", None),
+        )
+        print(
+            "Output tokens:",
+            getattr(usage, "output_tokens", None),
+        )
 
         return {
             "model": model_name,
@@ -494,6 +501,7 @@ def print_summary(rows: list[dict[str, Any]]) -> None:
         f"{'Extra':<8}"
         f"{'Req':<8}"
         f"{'Latency':<10}"
+        f"{'Input':<10}"
         f"{'Output':<10}"
     )
 
@@ -510,6 +518,7 @@ def print_summary(rows: list[dict[str, Any]]) -> None:
             f"{row['extra_tool_calls']:<8}"
             f"{str(row['requests']):<8}"
             f"{row['latency_seconds']:<10}"
+            f"{str(row['input_tokens']):<10}"
             f"{str(row['output_tokens']):<10}"
         )
 
@@ -599,30 +608,37 @@ def print_summary(rows: list[dict[str, Any]]) -> None:
 # 8. Main
 # ---------------------------------------------------------
 
-def main_old():
-    agents = {
-        "GPT-5.6-Luna": make_cloud_agent(),
-         "Qwen3-4B-Instruct": make_local_agent(),
-        # "Qwen3-4B": make_local_agent(),
-    }
+def main():
+    agent = make_local_agent()
+
+    print("Warming up Qwen3-4B-Instruct...")
+
+    warmup = agent.run_sync(
+        "只回复 OK。不要调用任何工具。"
+    )
+
+    print("Warmup:", warmup.output)
+    print()
 
     rows: list[dict[str, Any]] = []
 
-    for model_name, agent in agents.items():
-        for case in CASES:
-            for repeat in range(1, REPEATS + 1):
-                rows.append(
-                    run_case(
-                        model_name,
-                        agent,
-                        case,
-                        repeat,
-                    )
+    for case in CASES:
+        for repeat in range(1, REPEATS + 1):
+            rows.append(
+                run_case(
+                    "Qwen3-4B-Instruct",
+                    agent,
+                    case,
+                    repeat,
                 )
+            )
 
     print_summary(rows)
 
-    csv_path = BASE_DIR / "agent_eval_results_repeat3.csv"
+    csv_path = (
+        BASE_DIR
+        / "agent_eval_qwen3_4b_instruct_repeat3.csv"
+    )
 
     with csv_path.open(
         "w",
@@ -638,27 +654,6 @@ def main_old():
 
     print()
     print(f"Saved results to: {csv_path}")
-
-def main():
-    agent = make_local_agent()
-
-    case = next(
-        case
-        for case in CASES
-        if case.name == "T3_two_step"
-    )
-
-    rows = [
-        run_case(
-            "Qwen3-4B-Instruct",
-            agent,
-            case,
-            1,
-            total_repeats=1,
-        )
-    ]
-
-    print_summary(rows)
 
 if __name__ == "__main__":
     main()
