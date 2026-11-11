@@ -1,6 +1,9 @@
 from __future__ import annotations
 import time
 import csv
+import json
+import math
+import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -25,6 +28,8 @@ from pydantic_ai.providers.ollama import OllamaProvider
 BASE_DIR = Path(__file__).parent.resolve()
 SERVER_PATH = BASE_DIR / "mcp_server.py"
 REPEATS = 3
+FKG_SCORES = (0.82, 0.76, 0.91)
+NUMBER_TOLERANCE = 1e-9
 
 # ---------------------------------------------------------
 # 1. Eval cases
@@ -40,6 +45,16 @@ class EvalCase:
 
     # Simple deterministic check of final answer.
     answer_check: Callable[[str], bool]
+
+
+def is_t4_best_experiment_answer(answer: str) -> bool:
+    """Accept deterministic Chinese/English renderings of experiment_c."""
+    mentions_experiment_c = re.search(
+        r"(?:experiment[\s_]*c|实验\s*c)",
+        answer,
+        flags=re.IGNORECASE,
+    )
+    return bool(mentions_experiment_c) and "0.91" in answer
 
 
 CASES = [
@@ -90,10 +105,7 @@ CASES = [
         expected_tools=[
             "get_best_fkg_experiment",
         ],
-        answer_check=lambda x: (
-            "experiment_c" in x.lower()
-            and "0.91" in x
-        ),
+        answer_check=is_t4_best_experiment_answer,
     ),
 
     EvalCase(
@@ -195,6 +207,135 @@ def extract_tool_calls(result) -> list[str]:
                 tool_names.append(part.tool_name)
 
     return tool_names
+
+
+def extract_tool_call_details(result) -> list[dict[str, Any]]:
+    """Return each model-issued tool name and its raw arguments."""
+    calls: list[dict[str, Any]] = []
+
+    for message in result.all_messages():
+        if not isinstance(message, ModelResponse):
+            continue
+
+        for part in message.parts:
+            if isinstance(part, ToolCallPart):
+                calls.append(
+                    {
+                        "tool_name": part.tool_name,
+                        "args": part.args,
+                    }
+                )
+
+    return calls
+
+
+def serialize_tool_calls(calls: list[dict[str, Any]]) -> str:
+    return json.dumps(calls, ensure_ascii=False, sort_keys=True)
+
+
+def get_calculate_arguments(
+    args: Any,
+) -> tuple[str, list[float]] | None:
+    """Extract typed calculate arguments from a ToolCallPart."""
+    parsed_args = args
+    if isinstance(args, str):
+        try:
+            parsed_args = json.loads(args)
+        except json.JSONDecodeError:
+            return None
+
+    if not isinstance(parsed_args, dict):
+        return None
+
+    operation = parsed_args.get("operation")
+    values = parsed_args.get("values")
+    if not isinstance(operation, str) or not isinstance(values, list):
+        return None
+    if any(
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        for value in values
+    ):
+        return None
+
+    return operation, [float(value) for value in values]
+
+
+def values_match(
+    actual: list[float],
+    expected: tuple[float, ...],
+) -> bool:
+    if len(actual) != len(expected):
+        return False
+    return all(
+        math.isclose(
+            actual_value,
+            expected_value,
+            abs_tol=NUMBER_TOLERANCE,
+        )
+        for actual_value, expected_value in zip(
+            sorted(actual),
+            sorted(expected),
+        )
+    )
+
+
+def is_t5_mean_arguments(args: Any) -> bool:
+    """Validate the structured mean call over all three FKG scores."""
+    calculate_args = get_calculate_arguments(args)
+    if calculate_args is None:
+        return False
+    operation, values = calculate_args
+    return operation == "mean" and values_match(values, FKG_SCORES)
+
+
+def is_t3_subtract_arguments(args: Any) -> bool:
+    """Validate highest-minus-lowest using the structured subtract call."""
+    calculate_args = get_calculate_arguments(args)
+    if calculate_args is None:
+        return False
+    operation, values = calculate_args
+    return operation == "subtract" and values == [0.91, 0.76]
+
+
+def evaluate_tool_arguments(
+    case: EvalCase,
+    calls: list[dict[str, Any]],
+) -> bool:
+    """Apply case-specific argument checks without changing agent behavior."""
+    if case.name not in {"T3_two_step", "T5_composed_task"}:
+        return True
+
+    calculate_calls = [
+        call
+        for call in calls
+        if call["tool_name"] == "calculate"
+    ]
+    validator = (
+        is_t3_subtract_arguments
+        if case.name == "T3_two_step"
+        else is_t5_mean_arguments
+    )
+    return bool(calculate_calls) and all(
+        validator(call["args"])
+        for call in calculate_calls
+    )
+
+
+def evaluate_outcome_and_trajectory(
+    answer_correct: bool,
+    tool_selection_correct: bool,
+    tool_argument_correct: bool,
+    extra_tool_calls: int,
+) -> tuple[bool, bool]:
+    """Keep final outcome separate from the cleanliness of the trajectory."""
+    success = answer_correct and tool_selection_correct
+    trajectory_correct = (
+        success
+        and tool_argument_correct
+        and extra_tool_calls == 0
+    )
+    return success, trajectory_correct
 
 
 def _trace_preview(value: Any, limit: int = 500) -> str:
@@ -391,15 +532,26 @@ def run_case(
         usage = result.usage
 
         tool_names = extract_tool_calls(result)
+        tool_call_details = extract_tool_call_details(result)
+        tool_args = serialize_tool_calls(tool_call_details)
 
         answer_correct = case.answer_check(output)
 
-        tool_correct, extra_tools = evaluate_tools(
+        tool_selection_correct, extra_tools = evaluate_tools(
             tool_names,
             case.expected_tools,
         )
+        tool_argument_correct = evaluate_tool_arguments(
+            case,
+            tool_call_details,
+        )
 
-        success = answer_correct and tool_correct
+        success, trajectory_correct = evaluate_outcome_and_trajectory(
+            answer_correct,
+            tool_selection_correct,
+            tool_argument_correct,
+            extra_tools,
+        )
 
         if success:
             status = "PASS"
@@ -413,8 +565,13 @@ def run_case(
 
         print()
         print("Tools:", tool_names)
+        print("Tool args:", tool_args)
         print("Expected:", case.expected_tools)
         print("Status:", status)
+        print("Answer correct:", answer_correct)
+        print("Tool selection correct:", tool_selection_correct)
+        print("Tool argument correct:", tool_argument_correct)
+        print("Trajectory correct:", trajectory_correct)
         print("Extra tool calls:", extra_tools)
         print("Requests:", getattr(usage, "requests", None))
         print(f"Latency: {latency:.2f}s")
@@ -434,11 +591,15 @@ def run_case(
             "status": status,
             "success": success,
             "answer_correct": answer_correct,
-            "tool_correct": tool_correct,
+            "tool_correct": tool_selection_correct,
+            "tool_selection_correct": tool_selection_correct,
+            "tool_argument_correct": tool_argument_correct,
+            "trajectory_correct": trajectory_correct,
             "tool_calls_actual": len(tool_names),
             "tool_calls_expected": len(case.expected_tools),
             "extra_tool_calls": extra_tools,
             "tools": " -> ".join(tool_names),
+            "tool_args": tool_args,
             "requests": getattr(usage, "requests", None),
             "input_tokens": getattr(usage, "input_tokens", None),
             "output_tokens": getattr(usage, "output_tokens", None),
@@ -468,10 +629,14 @@ def run_case(
             "success": False,
             "answer_correct": False,
             "tool_correct": False,
+            "tool_selection_correct": False,
+            "tool_argument_correct": False,
+            "trajectory_correct": False,
             "tool_calls_actual": 0,
             "tool_calls_expected": len(case.expected_tools),
             "extra_tool_calls": 0,
             "tools": "",
+            "tool_args": "",
             "requests": None,
             "input_tokens": None,
             "output_tokens": None,
@@ -496,7 +661,11 @@ def print_summary(rows: list[dict[str, Any]]) -> None:
         f"{'Model':<15}"
         f"{'Case':<22}"
         f"{'Run':<6}"
-        f"{'Status':<20}"
+        f"{'Status':<14}"
+        f"{'Ans':<6}"
+        f"{'ToolSel':<8}"
+        f"{'ToolArg':<8}"
+        f"{'Traj':<6}"
         f"{'Tools':<8}"
         f"{'Extra':<8}"
         f"{'Req':<8}"
@@ -513,7 +682,11 @@ def print_summary(rows: list[dict[str, Any]]) -> None:
             f"{row['model']:<15}"
             f"{row['case']:<22}"
             f"{row['repeat']:<6}"
-            f"{row['status']:<20}"
+            f"{row['status']:<14}"
+            f"{str(row['answer_correct']):<6}"
+            f"{str(row['tool_selection_correct']):<8}"
+            f"{str(row['tool_argument_correct']):<8}"
+            f"{str(row['trajectory_correct']):<6}"
             f"{row['tool_calls_actual']:<8}"
             f"{row['extra_tool_calls']:<8}"
             f"{str(row['requests']):<8}"
@@ -575,6 +748,11 @@ def print_summary(rows: list[dict[str, Any]]) -> None:
             for row in model_rows
         )
 
+        trajectory_issues = sum(
+            row["success"] and not row["trajectory_correct"]
+            for row in model_rows
+        )
+
         latencies = [
             row["latency_seconds"]
             for row in model_rows
@@ -602,6 +780,7 @@ def print_summary(rows: list[dict[str, Any]]) -> None:
         print(f"  Tool failures:        {tool_failures}")
         print(f"  Other errors:         {other_errors}")
         print(f"  Extra tool calls:     {extra_tools}")
+        print(f"  Trajectory issues:    {trajectory_issues}")
         print(f"  Avg PASS latency:     {avg_latency:.2f}s")
         print(f"  Output tokens total:  {output_tokens}")
 # ---------------------------------------------------------

@@ -1,16 +1,16 @@
-model,case,repeat,status,success,answer_correct,tool_correct,tool_calls_actual,tool_calls_expected,extra_tool_calls,tools,requests,input_tokens,output_tokens,cache_read_tokens,latency_seconds,error
-Qwen3-4B-Instruct,T1_no_tool,1,PASS,True,True,True,0,0,0,,1,332,539,313,13.7,
-Qwen3-4B-Instruct,T1_no_tool,2,PASS,True,True,True,0,0,0,,1,332,419,331,10.38,
-Qwen3-4B-Instruct,T1_no_tool,3,PASS,True,True,True,0,0,0,,1,332,470,331,11.59,
-Qwen3-4B-Instruct,T2_single_tool,1,PASS,True,True,True,1,1,0,get_fkg_experiments,2,1308,761,649,20.78,
-Qwen3-4B-Instruct,T2_single_tool,2,PASS,True,True,True,1,1,0,get_fkg_experiments,2,1189,701,670,19.18,
-Qwen3-4B-Instruct,T2_single_tool,3,PASS,True,True,True,1,1,0,get_fkg_experiments,2,1334,724,670,20.28,
-Qwen3-4B-Instruct,T3_two_step,1,PASS,True,True,True,2,2,0,get_fkg_experiments -> calculate,3,7678,4085,3824,123.52,
-Qwen3-4B-Instruct,T3_two_step,2,PASS,True,True,True,2,2,0,get_fkg_experiments -> calculate,3,4683,2230,2636,63.79,
-Qwen3-4B-Instruct,T3_two_step,3,PASS,True,True,True,2,2,0,get_fkg_experiments -> calculate,3,4657,2679,2212,77.33,
-Qwen3-4B-Instruct,T4_specialized_tool,1,PASS,True,True,True,1,1,0,get_best_fkg_experiment,2,940,405,644,11.06,
-Qwen3-4B-Instruct,T4_specialized_tool,2,PASS,True,True,True,1,1,0,get_best_fkg_experiment,2,844,363,658,9.64,
-Qwen3-4B-Instruct,T4_specialized_tool,3,PASS,True,True,True,1,1,0,get_best_fkg_experiment,2,848,605,658,15.79,
-Qwen3-4B-Instruct,T5_composed_task,1,TIMEOUT,False,False,False,0,2,0,,,,,,361.3,ModelAPIError('Request timed out.')
-Qwen3-4B-Instruct,T5_composed_task,2,TIMEOUT,False,False,False,0,2,0,,,,,,361.35,ModelAPIError('Request timed out.')
-Qwen3-4B-Instruct,T5_composed_task,3,TIMEOUT,False,False,False,0,2,0,,,,,,361.5,ModelAPIError('Request timed out.')
+model,case,repeat,status,success,answer_correct,tool_correct,tool_selection_correct,tool_argument_correct,trajectory_correct,tool_calls_actual,tool_calls_expected,extra_tool_calls,tools,tool_args,requests,input_tokens,output_tokens,cache_read_tokens,latency_seconds,error
+Qwen3-4B-Instruct,T1_no_tool,1,PASS,True,True,True,True,True,True,0,0,0,,[],1,408,263,391,6.68,
+Qwen3-4B-Instruct,T1_no_tool,2,PASS,True,True,True,True,True,True,0,0,0,,[],1,408,196,407,4.92,
+Qwen3-4B-Instruct,T1_no_tool,3,PASS,True,True,True,True,True,True,0,0,0,,[],1,408,257,407,6.42,
+Qwen3-4B-Instruct,T2_single_tool,1,PASS,True,True,True,True,True,True,1,1,0,get_fkg_experiments,"[{""args"": ""{}"", ""tool_name"": ""get_fkg_experiments""}]",2,900,31,822,1.05,
+Qwen3-4B-Instruct,T2_single_tool,2,PASS,True,True,True,True,True,True,1,1,0,get_fkg_experiments,"[{""args"": ""{}"", ""tool_name"": ""get_fkg_experiments""}]",2,900,31,841,0.97,
+Qwen3-4B-Instruct,T2_single_tool,3,PASS,True,True,True,True,True,True,1,1,0,get_fkg_experiments,"[{""args"": ""{}"", ""tool_name"": ""get_fkg_experiments""}]",2,900,31,841,0.97,
+Qwen3-4B-Instruct,T3_two_step,1,PASS,True,True,True,True,True,True,2,2,0,get_fkg_experiments -> calculate,"[{""args"": ""{}"", ""tool_name"": ""get_fkg_experiments""}, {""args"": ""{\""expression\"":\""0.91 - 0.76\""}"", ""tool_name"": ""calculate""}]",3,1460,100,1345,2.99,
+Qwen3-4B-Instruct,T3_two_step,2,PASS,True,True,True,True,True,True,2,2,0,get_fkg_experiments -> calculate,"[{""args"": ""{}"", ""tool_name"": ""get_fkg_experiments""}, {""args"": ""{\""expression\"":\""0.91 - 0.76\""}"", ""tool_name"": ""calculate""}]",3,1460,100,1368,2.87,
+Qwen3-4B-Instruct,T3_two_step,3,PASS,True,True,True,True,True,True,2,2,0,get_fkg_experiments -> calculate,"[{""args"": ""{}"", ""tool_name"": ""get_fkg_experiments""}, {""args"": ""{\""expression\"":\""0.91 - 0.76\""}"", ""tool_name"": ""calculate""}]",3,1460,100,1368,2.88,
+Qwen3-4B-Instruct,T4_specialized_tool,1,PASS,True,True,True,True,True,True,1,1,0,get_best_fkg_experiment,"[{""args"": ""{}"", ""tool_name"": ""get_best_fkg_experiment""}]",2,856,42,816,1.26,
+Qwen3-4B-Instruct,T4_specialized_tool,2,PASS,True,True,True,True,True,True,1,1,0,get_best_fkg_experiment,"[{""args"": ""{}"", ""tool_name"": ""get_best_fkg_experiment""}]",2,856,43,829,1.2,
+Qwen3-4B-Instruct,T4_specialized_tool,3,PASS,True,True,True,True,True,True,1,1,0,get_best_fkg_experiment,"[{""args"": ""{}"", ""tool_name"": ""get_best_fkg_experiment""}]",2,856,42,829,1.17,
+Qwen3-4B-Instruct,T5_composed_task,1,ANSWER_FAIL,False,False,True,True,False,False,3,2,1,get_fkg_experiments -> get_best_fkg_experiment -> calculate,"[{""args"": ""{}"", ""tool_name"": ""get_fkg_experiments""}, {""args"": ""{}"", ""tool_name"": ""get_best_fkg_experiment""}, {""args"": ""{\""expression\"":\""((85 + 90 + 95) / 3)\""}"", ""tool_name"": ""calculate""}]",2,995,139,883,3.84,
+Qwen3-4B-Instruct,T5_composed_task,2,ANSWER_FAIL,False,False,True,True,False,False,3,2,1,get_fkg_experiments -> get_best_fkg_experiment -> calculate,"[{""args"": ""{}"", ""tool_name"": ""get_fkg_experiments""}, {""args"": ""{}"", ""tool_name"": ""get_best_fkg_experiment""}, {""args"": ""{\""expression\"":\""((85 + 90 + 95) / 3)\""}"", ""tool_name"": ""calculate""}]",2,995,140,910,3.79,
+Qwen3-4B-Instruct,T5_composed_task,3,ANSWER_FAIL,False,False,True,True,False,False,3,2,1,get_fkg_experiments -> get_best_fkg_experiment -> calculate,"[{""args"": ""{}"", ""tool_name"": ""get_fkg_experiments""}, {""args"": ""{}"", ""tool_name"": ""get_best_fkg_experiment""}, {""args"": ""{\""expression\"":\""((85 + 90 + 95) / 3)\""}"", ""tool_name"": ""calculate""}]",2,995,141,910,3.8,

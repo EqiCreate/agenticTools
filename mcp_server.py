@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Literal
 
 from mcp.server import MCPServer
 
@@ -18,18 +19,22 @@ def safe_path(filename: str) -> Path:
 
 
 @mcp.tool()
-def calculate(expression: str) -> str:
-    """Calculate a simple arithmetic expression."""
+def calculate(
+    operation: Literal["mean", "subtract"],
+    values: list[float],
+) -> float:
+    """Calculate the mean of values or subtract the second value from the first."""
+    if operation == "mean":
+        if not values:
+            raise ValueError("mean requires at least one value")
+        return sum(values) / len(values)
 
-    allowed = set("0123456789+-*/(). %")
+    if operation == "subtract":
+        if len(values) != 2:
+            raise ValueError("subtract requires exactly two values")
+        return values[0] - values[1]
 
-    if not set(expression) <= allowed:
-        return "Unsupported expression."
-
-    try:
-        return str(eval(expression, {"__builtins__": {}}, {}))
-    except Exception as e:
-        return f"Calculation error: {e}"
+    raise ValueError(f"Unsupported operation: {operation}")
 
 
 @mcp.tool()
